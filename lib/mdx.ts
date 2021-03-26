@@ -2,11 +2,29 @@ import fs from 'fs';
 import matter from 'gray-matter';
 import path from 'path';
 import readingTime from 'reading-time';
-import renderToString from 'next-mdx-remote/render-to-string';
-import MDXComponents from '@theme/components/MDX/MDXComponents';
+import { bundleMDX } from 'mdx-bundler';
+// import renderToString from 'next-mdx-remote/render-to-string';
+// import MDXComponents from '@theme/components/MDX/MDXComponents';
 import { FrontMatterPostType, PostByType, PostType } from 'types/post';
 import { remarkSectionize } from './remark-sectionize-fork';
 import { remarkFigure } from './remark-figure';
+
+if (process.platform === 'win32') {
+  process.env.ESBUILD_BINARY_PATH = path.join(
+    process.cwd(),
+    'node_modules',
+    'esbuild',
+    'esbuild.exe'
+  );
+} else {
+  process.env.ESBUILD_BINARY_PATH = path.join(
+    process.cwd(),
+    'node_modules',
+    'esbuild',
+    'bin',
+    'esbuild'
+  );
+}
 
 const typeToPath = {
   [PostType.BLOGPOST]: 'content',
@@ -31,22 +49,55 @@ export const getFileBySlug = async <T extends PostType>(
     'utf8'
   );
 
-  const parsedFile = matter(source);
+  const ScrollSpyWidget = fs
+    .readFileSync(
+      path.join(
+        root,
+        'core/components/MDX/custom/Widgets',
+        'ScrollSpyWidget.tsx'
+      ),
+      'utf8'
+    )
+    .trim();
 
-  const data = parsedFile.data;
-  const content = parsedFile.content;
+  const ThemeContext = fs.readFileSync(
+    path.join(root, 'core/context', 'ThemeContext.tsx'),
+    'utf8'
+  );
 
-  const mdxSource = await renderToString(content, {
-    components: MDXComponents,
-    mdxOptions: {
-      remarkPlugins: [
+  // console.log(ScrollSpyWidget);
+
+  const resultMDX = await bundleMDX(source, {
+    files: {
+      './ScrollSpyWidget.tsx': ScrollSpyWidget,
+      './ThemeContext.tsx': ThemeContext,
+    },
+    xdmOptions(_, options) {
+      options.remarkPlugins = [
+        ...(options.remarkPlugins ?? []),
         require('remark-slug'),
         require('remark-autolink-headings'),
         remarkSectionize,
         remarkFigure,
-      ],
+      ];
+
+      options.rehypePlugins = [];
+
+      return options;
     },
   });
+
+  // const mdxSourceOld = await renderToString(content, {
+  //   components: MDXComponents,
+  //   mdxOptions: {
+  //     remarkPlugins: [
+  //       require('remark-slug'),
+  //       require('remark-autolink-headings'),
+  //       remarkSectionize,
+  //       remarkFigure,
+  //     ],
+  //   },
+  // });
 
   if (type === PostType.BLOGPOST) {
     // TODO: maybe we want to extract this in its own lib?
@@ -54,7 +105,7 @@ export const getFileBySlug = async <T extends PostType>(
      * Find all occurrence of <StaticTweet id="NUMERIC_TWEET_ID"/>
      * in the content of the MDX blog post
      */
-    const tweetMatch = content.match(TWEET_RE);
+    const tweetMatch = source.match(TWEET_RE);
 
     /**
      * For all occurrences / matches, extract the id portion of the
@@ -71,11 +122,11 @@ export const getFileBySlug = async <T extends PostType>(
     });
 
     const result = {
-      mdxSource,
+      mdxSource: resultMDX.code,
       tweetIDs: tweetIDs || [],
       frontMatter: {
-        readingTime: readingTime(content),
-        ...data,
+        readingTime: readingTime(source),
+        ...resultMDX.frontmatter,
       },
     };
 
@@ -83,8 +134,8 @@ export const getFileBySlug = async <T extends PostType>(
   }
 
   return {
-    mdxSource,
-    frontMatter: data,
+    mdxSource: resultMDX.code,
+    frontMatter: resultMDX.frontmatter,
   } as FrontMatterPostType<T>;
 };
 

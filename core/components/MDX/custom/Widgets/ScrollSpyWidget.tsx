@@ -11,14 +11,14 @@ import {
   HighlightedValue,
 } from './Components';
 
-const BrowserWindow = styled('div')<{ dark?: boolean }>`
+const BrowserWindow = styled('div')<{ dark: boolean }>`
   border-radius: var(--border-radius-1);
   background: ${(p) => (p.dark ? '#38393A' : '#ffffff')};
   width: 100%;
   box-shadow: var(--maximeheckel-shadow-3);
 `;
 
-const BrowserHeader = styled('div')<{ dark?: boolean }>`
+const BrowserHeader = styled('div')<{ dark: boolean }>`
   height: 53px;
   padding: 0px 20px;
   background: ${(p) => (p.dark ? '#191C1F' : '#ffffff')};
@@ -31,7 +31,7 @@ const BrowserHeader = styled('div')<{ dark?: boolean }>`
   border-radius: var(--border-radius-1) var(--border-radius-1) 0px 0px;
 `;
 
-const SearchBar = styled('div')<{ dark?: boolean }>`
+const SearchBar = styled('div')<{ dark: boolean }>`
   background: ${(p) => (p.dark ? '#0C0F12' : 'rgba(0, 0, 0, 0.05)')};
   border-radius: 6px;
   height: 28px;
@@ -47,7 +47,7 @@ const TrafficLights = styled('div')`
   align-items: center;
 `;
 
-const Section = styled('section')<{ intersecting?: boolean }>`
+const Section = styled('section')<{ intersecting: boolean }>`
   margin-bottom: 20px;
   background: ${(p) =>
     p.intersecting
@@ -267,4 +267,12 @@ const ScrollSpyWidget = () => {
   );
 };
 
-export default ScrollSpyWidget;
+const ScrollSpyWidgetWrapper = () => {
+  if (typeof window === 'object') {
+    return <ScrollSpyWidget />;
+  }
+
+  return null;
+};
+
+export default ScrollSpyWidgetWrapper;

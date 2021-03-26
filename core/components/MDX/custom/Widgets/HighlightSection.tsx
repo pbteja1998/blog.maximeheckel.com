@@ -59,4 +59,12 @@ const HighlightSection = () => {
   );
 };
 
-export default HighlightSection;
+const HighlightSectionWrapper = () => {
+  if (typeof window === 'object') {
+    return <HighlightSection />;
+  }
+
+  return null;
+};
+
+export default HighlightSectionWrapper;
